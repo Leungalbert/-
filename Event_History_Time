@@ -1,0 +1,20 @@
+select to_char(b.begin_interval_time,'yyyymmdd hh24:mi')  TIME,a.event,a.pct,a.time from
+(select snap_id, event, pct || '%' PCT, time
+  from (select snap_id,
+               event,
+               round(time) time,
+               round(RATIO_TO_REPORT(TIME) over(partition by snap_id) *  100,
+                     1) pct
+          from (select 'CPU Time' EVENT,
+                       snap_id,
+                       value / 100 - LAG(value) over(partition by stat_name  order by snap_id) / 100 TIME
+                  from DBA_HIST_SYSSTAT
+                 where stat_name = 'CPU used by this session'
+                union all
+                select event_name,
+                       snap_id,
+                       time_waited_micro / 1e6 - LAG(time_waited_micro)  over(partition by event_name order by snap_id) / 1e6
+                  from DBA_HIST_SYSTEM_EVENT
+                 where wait_class != 'Idle')
+         where time > 0)
+where pct > 1) a,dba_hist_snapshot b where a.snap_id=b.snap_id order by  1 desc
