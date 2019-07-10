@@ -1,0 +1,31 @@
+set line 1000
+set pagesize 2000
+col ses for a20
+col wait_event_text for a40
+with blocked as
+(select *
+    from (select instance,
+                 sid,
+                 sess_serial#,
+                 blocker_instance,
+                 blocker_sid,
+                 blocker_sess_serial#,
+                 WAIT_EVENT_TEXT,
+                 level lv,
+                 num_waiters,
+                 blocker_chain_id
+            from v$wait_chains
+          connect by PRIOR sid = blocker_sid
+                 and PRIOR sess_serial# = blocker_sess_serial#
+                 and PRIOR INSTANCE = BLOCKER_INSTANCE
+           START WITH blocker_is_valid = 'FALSE')
+   where num_waiters > 0
+      or blocker_sid is not null)
+select instance,
+       lpad(' ', 2 * (lv - 1)) || b.sid ses,
+       b.sess_serial#,
+       WAIT_EVENT_TEXT,
+       b.blocker_instance,
+       b.blocker_sid,
+       b.blocker_sess_serial#
+  from blocked b;
