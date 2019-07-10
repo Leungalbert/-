@@ -1,0 +1,23 @@
+select
+'usernmae     : ' ||s.username      || CHR(10)||
+'SCHMEA       : ' ||S.SCHEMANAME     || CHR(10)||
+'OSUSER       : ' ||S.OSUSER         || CHR(10)||
+'MODUEL       : ' ||S.MODULE        || CHR(10)||
+'ACTION       : ' ||S.action        || CHR(10)||
+'CLIENT_INFO  : ' ||S.CLIENT_INFO   || CHR(10)||
+'PROGRAM      : ' ||S.PROGRAM       || CHR(10)||
+'SPID         : ' ||p.spid          || CHR(10)||
+'SID          : ' ||S.SID           || CHR(10)||
+'SERIAL#      : ' ||S.SERIAL#       || CHR(10)||
+'KILL STRING  : ' ||''''||S.SID||','||S.SERIAL#||''''     || CHR(10)||
+'MACINE       : ' ||S.MACHINE       || CHR(10)||
+'TYPE         : ' ||S.TYPE          || CHR(10)||
+'TERMINAL     : ' ||S.terminal      || CHR(10)||
+'SQL_ID       : ' ||q.SQL_ID        || CHR(10)||
+'CHIKD_NUM    : ' ||q.child_number  || CHR(10)||
+'SQL_TEXT     : ' ||q.sql_text      
+from v$session s,v$process p,v$sql q
+where s.paddr=p.addr
+and p.spid='&PID_FROM_OS'
+and s.sql_id=q.sql_id(+)
+and s.status='ACTIVE'
