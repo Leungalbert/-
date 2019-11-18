@@ -1,0 +1,39 @@
+with CH as
+(select snaptime,
+         sum(case
+               when stat_name = 'parse count (hard)' then
+                a.hard_parse_value
+               else
+                0
+             end) COUNT_HARD
+    from (select to_char(b.begin_interval_time, 'yyyy-mm-dd hh24:mi:ss')  as snaptime,
+                 stat_name,
+                 value - lag(value) over(partition by stat_name,  a.instance_number order by a.snap_id) hard_parse_value
+            from dba_hist_sysstat a, dba_hist_snapshot b
+           where a.snap_id = b.snap_id
+             and a.dbid = b.dbid
+             and a.instance_number = b.instance_number
+             and a.stat_name in ('parse count (hard)')) a
+   group by snaptime),
+CP as
+(select snaptime,
+         sum(case
+               when stat_name = 'parse count (total)' then
+                a.hard_parse_value
+               else
+                0
+             end) COUNT_PARSE
+    from (select to_char(b.begin_interval_time, 'yyyy-mm-dd hh24:mi:ss')  as snaptime,
+                 stat_name,
+                 value - lag(value) over(partition by stat_name,  a.instance_number order by a.snap_id) hard_parse_value
+            from dba_hist_sysstat a, dba_hist_snapshot b
+           where a.snap_id = b.snap_id
+             and a.dbid = b.dbid
+             and a.instance_number = b.instance_number
+             and a.stat_name in ('parse count (total)')) a
+   group by snaptime)
+select CP.SNAPTIME,
+       round(CH.COUNT_HARD / CP.COUNT_PARSE * 100, 2) as PCT_HARD
+  from CH, CP
+where CH.SNAPTIME = CP.SNAPTIME
+order by 1
